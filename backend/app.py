@@ -6,6 +6,7 @@ from db import get_connection
 from flask import request
 
 
+
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
