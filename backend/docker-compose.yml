@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: exam_prep_postgres
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: medhadb
+      POSTGRES_USER: medha
+      POSTGRES_PASSWORD: medha123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
