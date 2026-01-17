@@ -2,14 +2,61 @@ print("APP FILE LOADED")
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from db import get_connection
+from .db import get_connection
 from flask import request
+from .auth import signup, login
+from flask_jwt_extended import JWTManager
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+
+
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+load_dotenv(BASE_DIR / ".env")
 
 
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+app.config["SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+# Explicitly set JWT token location to Authorization header
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config["JWT_HEADER_NAME"] = "Authorization"
+app.config["JWT_HEADER_TYPE"] = "Bearer"
+print("JWT_SECRET_KEY loaded:", bool(app.config["JWT_SECRET_KEY"]))
 
+jwt = JWTManager(app)
+
+# JWT Error handlers for better debugging
+@jwt.invalid_token_loader
+def invalid_token_callback(error_string):
+    print(f"Invalid JWT token: {error_string}")
+    return jsonify({"error": f"Invalid token: {error_string}"}), 422
+
+@jwt.unauthorized_loader
+def missing_token_callback(error_string):
+    print(f"Missing JWT token: {error_string}")
+    return jsonify({"error": f"Authorization required: {error_string}"}), 401
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    print(f"Expired JWT token: {jwt_payload}")
+    return jsonify({"error": "Token has expired"}), 401
+
+CORS(
+    app,
+    origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"]
+)
+
+
+
+app.add_url_rule("/auth/signup", view_func=signup, methods=["POST"])
+app.add_url_rule("/auth/login", view_func=login, methods=["POST"])
 
 @app.route("/health")
 def health():
@@ -56,7 +103,7 @@ def update_topic_status(topic_id):
     cur.execute(
         """
         UPDATE topics
-        SET status = %s, updated_at = CURRENT_TIMESTAMP
+        SET status = %s
         WHERE id = %s;
         """,
         (new_status, topic_id)
@@ -68,10 +115,17 @@ def update_topic_status(topic_id):
     return jsonify({"message": "Status updated"})
 
 @app.route("/subjects", methods=["GET"])
+@jwt_required()
 def get_subjects():
+    user_id_str = get_jwt_identity()
+    # Convert string identity back to int for database query
+    user_id = int(user_id_str) if user_id_str else None
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, name FROM subjects ORDER BY id;")
+    cur.execute(
+        "SELECT id, name FROM subjects WHERE user_id = %s ORDER BY id;",
+        (user_id,)
+    )
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -84,14 +138,23 @@ def get_subjects():
         })
 
     return jsonify(subjects)
+
+
 @app.route("/subjects", methods=["POST"])
+@jwt_required()
 def add_subject():
     data = request.get_json()
     name = data.get("name")
-
+    user_id_str = get_jwt_identity()
+    # Convert string identity back to int for database query
+    user_id = int(user_id_str) if user_id_str else None
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("INSERT INTO subjects (name) VALUES (%s) RETURNING id;", (name,))
+    cur.execute(
+        "INSERT INTO subjects (user_id, name) VALUES (%s, %s) RETURNING id;",
+         (user_id, name)
+    )
+
     subject_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
@@ -235,7 +298,7 @@ def get_unit_notes(unit_id):
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT id, content FROM unit_notes WHERE unit_id = %s ORDER BY created_at DESC",
+        "SELECT id, content FROM notes WHERE unit_id = %s ORDER BY created_at DESC",
         (unit_id,)
     )
 
@@ -253,7 +316,7 @@ def add_unit_note(unit_id):
     cur = conn.cursor()
 
     cur.execute(
-        "INSERT INTO unit_notes (unit_id, content) VALUES (%s, %s) RETURNING id",
+        "INSERT INTO notes (unit_id, content) VALUES (%s, %s) RETURNING id",
         (unit_id, data["content"])
     )
 
@@ -269,7 +332,7 @@ def delete_unit_note(note_id):
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("DELETE FROM unit_notes WHERE id = %s", (note_id,))
+    cur.execute("DELETE FROM notes WHERE id = %s", (note_id,))
     conn.commit()
 
     cur.close()

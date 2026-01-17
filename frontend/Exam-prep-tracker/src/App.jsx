@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { api } from "./api";
+import { api } from "./lib/api";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import RequireAuth from "./lib/RequireAuth";
+
 
 const renderWithLinks = text => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -20,9 +25,8 @@ const renderWithLinks = text => {
     )
   );
 };
-
-
-function App() {
+function Dashboard() {
+  const navigate = useNavigate();
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [units, setUnits] = useState([]);
@@ -38,6 +42,12 @@ function App() {
   const [noteText, setNoteText] = useState("");
   const [unitProgress, setUnitProgress] = useState(0);
   const [subjectProgress, setSubjectProgress] = useState(0);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    navigate("/login");
+  };
 
 
   useEffect(() => {
@@ -189,9 +199,50 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-300 to-indigo-400 p-10">
-      <h1 className="text-center text-4xl font-bold text-white mb-8 tracking-wide">
-        Exam Preparation Tracker
-      </h1>
+      <div className="relative flex justify-center items-center mb-8">
+        <h1 className="text-center text-4xl font-bold text-white tracking-wide">
+          Exam Preparation Tracker
+        </h1>
+        <div className="absolute right-0">
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-lg hover:bg-indigo-50 transition-colors"
+              aria-label="Profile menu"
+            >
+              <svg
+                className="w-6 h-6 text-indigo-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            </button>
+            {showProfileMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowProfileMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-20 py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
       
       <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-8 space-y-10">
@@ -379,4 +430,24 @@ function App() {
   );
 }
 
-export default App;
+
+
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <Dashboard />
+            </RequireAuth>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
