@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: exam_prep_tracker
+Version: 0.1.0
+Requires-Dist: flask
+Requires-Dist: flask-cors
+Requires-Dist: python-dotenv
+Requires-Dist: sqlalchemy
+Requires-Dist: flask-jwt-extended
+Requires-Dist: passlib[bcrypt]
+Requires-Dist: psycopg2-binary

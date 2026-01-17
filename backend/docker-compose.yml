@@ -5,13 +5,14 @@ services:
     image: postgres:15
     container_name: exam_prep_postgres
     ports:
-      - "5435:5432"
+      - "${POSTGRES_PORT:-5435}:5432"
     environment:
-      POSTGRES_DB: medhadb
-      POSTGRES_USER: medha
-      POSTGRES_PASSWORD: medha123
+      POSTGRES_DB: ${POSTGRES_DB:-exam_prep_db}
+      POSTGRES_USER: ${POSTGRES_USER:-exam_prep_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-exam_prep_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: unless-stopped
 volumes:
   postgres_data:

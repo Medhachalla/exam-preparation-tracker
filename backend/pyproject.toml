@@ -1,0 +1,21 @@
+[project]
+name = "exam_prep_tracker"
+version = "0.1.0"
+dependencies = [
+  "flask",
+  "flask-cors",
+  "python-dotenv",
+  "sqlalchemy",
+  "flask-jwt-extended",
+  "passlib[bcrypt]",
+  "psycopg2-binary"
+]
+
+
+
+[tool.uv]
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,37 @@
+-- Users
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Subjects
+CREATE TABLE IF NOT EXISTS subjects (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL
+);
+
+-- Units
+CREATE TABLE IF NOT EXISTS units (
+    id SERIAL PRIMARY KEY,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    name TEXT NOT NULL
+);
+
+-- Topics
+CREATE TABLE IF NOT EXISTS topics (
+    id SERIAL PRIMARY KEY,
+    unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    status TEXT DEFAULT 'Not Started'
+);
+
+-- Notes
+CREATE TABLE IF NOT EXISTS notes (
+    id SERIAL PRIMARY KEY,
+    unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
