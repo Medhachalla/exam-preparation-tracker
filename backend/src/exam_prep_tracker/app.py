@@ -14,9 +14,9 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 
-BASE_DIR = Path(__file__).resolve().parents[3]
+# Load environment variables from backend/.env
+BASE_DIR = Path(__file__).resolve().parents[2]  # points to backend/
 load_dotenv(BASE_DIR / ".env")
-
 
 
 app = Flask(__name__)
@@ -34,7 +34,8 @@ jwt = JWTManager(app)
 @jwt.invalid_token_loader
 def invalid_token_callback(error_string):
     print(f"Invalid JWT token: {error_string}")
-    return jsonify({"error": f"Invalid token: {error_string}"}), 422
+    # Treat invalid tokens as unauthorized (401) so the frontend can redirect
+    return jsonify({"error": f"Invalid token: {error_string}"}), 401
 
 @jwt.unauthorized_loader
 def missing_token_callback(error_string):
@@ -48,9 +49,14 @@ def expired_token_callback(jwt_header, jwt_payload):
 
 CORS(
     app,
-    origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
     supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization"]
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 

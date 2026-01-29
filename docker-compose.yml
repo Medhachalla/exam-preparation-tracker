@@ -1,0 +1,40 @@
+
+
+services:
+  db:
+    image: postgres:15
+    container_name: exam-prep-db
+    environment:
+      POSTGRES_DB: exam_prep_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+  backend:
+   build: ./backend
+   container_name: exam-prep-backend
+   ports:
+     - "5000:5000"
+      
+   env_file:
+     - .env
+   depends_on:
+     - db
+
+  frontend:
+   build: ./frontend/Exam-prep-tracker
+   container_name: exam-prep-frontend
+   ports:
+     - "5173:5173"
+   env_file:
+     - frontend/Exam-prep-tracker/.env
+   depends_on:
+     - backend
+
+  
+volumes:
+  postgres_data:
