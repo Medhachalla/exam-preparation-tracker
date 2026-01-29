@@ -1,6 +1,8 @@
 Metadata-Version: 2.4
-Name: exam_prep_tracker
+Name: exam-preparation-tracker-backend
 Version: 0.1.0
+Summary: Backend API for Exam Preparation Tracker
+Requires-Python: >=3.10
 Requires-Dist: flask
 Requires-Dist: flask-cors
 Requires-Dist: python-dotenv

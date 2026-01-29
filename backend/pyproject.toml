@@ -1,6 +1,14 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+
 [project]
-name = "exam_prep_tracker"
+name = "exam-preparation-tracker-backend"
 version = "0.1.0"
+description = "Backend API for Exam Preparation Tracker"
+requires-python = ">=3.10"
+
 dependencies = [
   "flask",
   "flask-cors",
@@ -10,8 +18,6 @@ dependencies = [
   "passlib[bcrypt]",
   "psycopg2-binary"
 ]
-
-
 
 [tool.uv]
 [tool.setuptools]
