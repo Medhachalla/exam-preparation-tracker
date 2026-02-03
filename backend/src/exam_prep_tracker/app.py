@@ -13,22 +13,94 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+import sys
+import secrets
+import logging
 
-# Load environment variables from backend/.env
+# Load environment variables from backend/.env early (do not override existing env vars)
 BASE_DIR = Path(__file__).resolve().parents[2]  # points to backend/
-load_dotenv(BASE_DIR / ".env")
+env_path = BASE_DIR / ".env"
+load_dotenv(env_path)
 
+# Helper to read env vars with optional default
+def _get_env(name, default=None):
+    return os.getenv(name, default)
 
+# Create Flask app now that env vars are available
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
-app.config["SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+
+# Read core configuration
+FLASK_ENV = _get_env("FLASK_ENV", "production")
+app.config["ENV"] = FLASK_ENV
+app.config["DEBUG"] = FLASK_ENV == "development"
+
+# SECURITY: prefer an explicit SECRET_KEY variable. For development only, fall back to a temporary key.
+SECRET_KEY = _get_env("SECRET_KEY")
+JWT_SECRET_KEY = _get_env("JWT_SECRET_KEY")
+
+if not SECRET_KEY and FLASK_ENV == "development":
+    # Generate a transient development secret to avoid crashing in local dev.
+    SECRET_KEY = secrets.token_urlsafe(32)
+    app.logger.warning("SECRET_KEY not set: using a temporary development secret. Set SECRET_KEY in backend/.env for persistent value.")
+
+# Apply secrets to Flask and JWT config if present
+if SECRET_KEY:
+    app.config["SECRET_KEY"] = SECRET_KEY
+if JWT_SECRET_KEY:
+    app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
+
 # Explicitly set JWT token location to Authorization header
 app.config["JWT_TOKEN_LOCATION"] = ["headers"]
 app.config["JWT_HEADER_NAME"] = "Authorization"
 app.config["JWT_HEADER_TYPE"] = "Bearer"
-print("JWT_SECRET_KEY loaded:", bool(app.config["JWT_SECRET_KEY"]))
+
+# Minimal logging feedback (safe to run at import)
+app.logger.info("FLASK_ENV=%s", FLASK_ENV)
+app.logger.info("SECRET_KEY set: %s", bool(app.config.get("SECRET_KEY")))
+app.logger.info("JWT_SECRET_KEY set: %s", bool(app.config.get("JWT_SECRET_KEY")))
 
 jwt = JWTManager(app)
+
+# Validation helper: can be called at import (logs) or at startup (exits on failure)
+def validate_env(raise_on_missing: bool = False) -> bool:
+    """Validate critical environment variables.
+
+    If raise_on_missing is True then the process will exit with a clear message when critical
+    variables are missing. When False, missing variables are only logged. This avoids import-time
+    crashes while providing strict startup-time checks.
+    """
+    missing = []
+
+    # JWT secret is required for auth to work
+    if not app.config.get("JWT_SECRET_KEY"):
+        missing.append("JWT_SECRET_KEY")
+
+    # SECRET_KEY is required in production
+    if FLASK_ENV != "development" and not app.config.get("SECRET_KEY"):
+        missing.append("SECRET_KEY")
+
+    # Database: prefer DATABASE_URL but accept composed POSTGRES_* vars
+    database_url = _get_env("DATABASE_URL")
+    if not database_url:
+        # check for minimal set of postgres compose vars
+        pg_user = _get_env("POSTGRES_USER")
+        pg_pass = _get_env("POSTGRES_PASSWORD")
+        pg_db = _get_env("POSTGRES_DB")
+        pg_host = _get_env("POSTGRES_HOST")
+        if not (pg_user and pg_pass and pg_db and (pg_host or _get_env("POSTGRES_HOSTNAME"))):
+            missing.append("DATABASE_URL or POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB/POSTGRES_HOST")
+
+    if missing:
+        msg = "Missing required environment variables: " + ", ".join(missing)
+        app.logger.error(msg)
+        if raise_on_missing:
+            # Exit with a clear message so that container orchestrators / uv will show the reason
+            sys.exit(msg)
+        return False
+
+    app.logger.info("Environment validation passed")
+    return True
+
 
 # JWT Error handlers for better debugging
 @jwt.invalid_token_loader
@@ -396,5 +468,7 @@ def get_subject_progress(subject_id):
 print("ROUTES REGISTERED")
 
 if __name__ == "__main__":
+    # Perform strict validation when starting the server interactively or in container
+    validate_env(raise_on_missing=True)
     print("STARTING FLASK SERVER")
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=app.config.get("DEBUG", False))

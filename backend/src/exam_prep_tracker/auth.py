@@ -3,6 +3,7 @@ import hashlib
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token
 from .db import get_connection
+import traceback
 
 
 def hash_password(password: str) -> str:
@@ -47,6 +48,7 @@ def signup():
         except Exception as e:
             # Log server-side and return generic error to client
             print(f"Error hashing password for signup: {e}")
+            traceback.print_exc()
             return jsonify({"error": "Failed to process password"}), 500
 
         conn = get_connection()
@@ -62,6 +64,7 @@ def signup():
             conn.rollback()
             msg = str(e)
             print(f"Error creating user: {msg}")
+            traceback.print_exc()
             # Basic duplicate email detection; keep message generic
             if "duplicate key" in msg or "unique constraint" in msg:
                 return jsonify({"error": "Email is already registered"}), 400
@@ -74,6 +77,7 @@ def signup():
 
     except Exception as e:
         print(f"Unhandled error in signup: {e}")
+        traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -114,4 +118,5 @@ def login():
 
     except Exception as e:
         print(f"Unhandled error in login: {e}")
+        traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500

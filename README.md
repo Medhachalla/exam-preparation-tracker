@@ -56,6 +56,7 @@ From the repository root, run:
 
 ```bash
 mise install
+mise activate
 ```
 
 This command reads the project's mise configuration and installs the required versions of Python (3.12) and Node.js (18+). These runtimes are automatically used when running commands within the project directory.
@@ -86,11 +87,6 @@ uv pip install -e .
 
 This installs the `exam_prep_tracker` package in editable mode along with all dependencies specified in `pyproject.toml`.
 
-**Important notes:**
-- Do not use `pip install` directly
-- Do not manually activate the virtual environment with `source venv/bin/activate`
-- The project does not use `requirements.txt`
-- All Python dependencies are managed through `pyproject.toml` and uv
 
 ### Step 4: Run the backend server
 
@@ -130,11 +126,6 @@ You should see the PostgreSQL container with a status of "running".
 docker compose logs -f postgres
 ```
 
-### Stop PostgreSQL
-
-```bash
-docker compose down
-```
 
 ## Environment Variables
 
@@ -204,27 +195,12 @@ The React frontend expects the Flask backend to be available at `http://127.0.0.
 2. Backend: `uv run python -m exam_prep_tracker.app` (from `backend/`)
 3. Frontend: `npm run dev` (from `frontend/`)
 
-### Do not mix uv with manual virtual environments
 
-Do not create virtual environments using `python -m venv` or `virtualenv`. Always use `uv venv` to create environments. Mixing different environment management tools can cause dependency conflicts and version mismatches.
 
 ### Run uv commands from backend directory
 
 All `uv` commands (`uv venv`, `uv pip install -e .`, `uv run`) must be executed from the `backend/` directory. Running these commands from other directories may fail to locate `pyproject.toml` or create environments in unexpected locations.
 
-## Development Philosophy
-
-### Why uv instead of pip
-
-uv provides a unified interface for virtual environment creation, dependency installation, and command execution. It eliminates the need for separate `pip` and `venv` commands while ensuring consistent dependency resolution. The `uv pip install -e .` command installs the package in editable mode with all dependencies, matching the production deployment environment.
-
-### Why mise for runtimes
-
-mise ensures all developers use identical Python and Node.js versions, preventing version-related bugs and inconsistencies. A single `mise install` command sets up the required runtimes, making onboarding faster and more reliable.
-
-### Why src layout
-
-The backend uses a src layout with the `exam_prep_tracker` package located in `backend/src/exam_prep_tracker/`. This structure prevents accidental imports from the project root and ensures all imports go through the installed package, matching production behavior. It works seamlessly with editable installs via `uv pip install -e .`.
 
 ## License
 
