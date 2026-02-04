@@ -149,6 +149,25 @@ DATABASE_URL=postgresql://username:password@localhost:5435/database_name
 
 **Note**: After modifying `.env`, restart the backend server for changes to take effect.
 
+### Frontend environment variables
+
+The frontend (Vite) loads environment variables from `frontend/Exam-prep-tracker/.env`. An example file is provided at `frontend/Exam-prep-tracker/.env.example`.
+
+Currently required frontend variable:
+
+- `VITE_API_BASE_URL` — base URL the frontend uses for API requests (including protocol and port), for example: `http://127.0.0.1:5000`.
+
+Example `frontend/Exam-prep-tracker/.env`:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:5000
+```
+
+Notes:
+- Vite only exposes env variables prefixed with `VITE_` to the client bundle.
+- Changes to the frontend `.env` require restarting the Vite dev server (`npm run dev`) to take effect.
+- If the backend is running in Docker or on a different host/port, update `VITE_API_BASE_URL` accordingly.
+
 ## Frontend Setup
 
 The frontend is a React application built with Vite.
